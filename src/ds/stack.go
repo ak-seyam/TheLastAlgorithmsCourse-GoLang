@@ -7,7 +7,7 @@ type Stack[T interface{}] struct {
 
 func (s *Stack[T]) Push(item T) {
 	s.data = append(s.data, item)
-	s.topIdx++
+	s.topIdx = len(s.data) - 1
 }
 
 func (s *Stack[T]) Pop() T {
