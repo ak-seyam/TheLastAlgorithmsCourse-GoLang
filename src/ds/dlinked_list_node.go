@@ -33,3 +33,14 @@ func NewDlinkedListNode[T interface{}](opts ...NodeDefFunc[T]) DLinkedListNode[T
 	}
 	return d
 }
+
+func (d DLinkedListNode[T]) Remove() {
+	prev := d.Prev
+	nxt := d.Next
+	if prev != nil {
+		prev.Next = nxt
+	}
+	if nxt != nil {
+		nxt.Prev = prev
+	}
+}

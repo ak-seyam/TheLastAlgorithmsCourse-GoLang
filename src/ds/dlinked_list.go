@@ -1,6 +1,8 @@
 package ds
 
-import "errors"
+import (
+	"errors"
+)
 
 type DLinkedList[T interface{}] struct {
 	Head   *DLinkedListNode[T]
@@ -8,11 +10,18 @@ type DLinkedList[T interface{}] struct {
 	Length int64
 }
 
-func (d *DLinkedList[T]) Prepend(v T) {
+func (d *DLinkedList[T]) Prepend(v T) *DLinkedListNode[T] {
 	oh := d.Head
 	n := NewDlinkedListNode(WithValue(v), WithNext(oh))
-	oh.Prev = &n
+	if oh != nil {
+		oh.Prev = &n
+	}
+	d.Head = &n
+	if d.Length == 0 {
+		d.Tail = &n
+	}
 	d.Length++
+	return &n
 }
 
 func (d *DLinkedList[T]) Append(v T) {
@@ -64,4 +73,15 @@ func (d *DLinkedList[T]) Remove(idx int64) error {
 	prev.Next = curr.Next
 	d.Length--
 	return nil
+}
+
+func (d *DLinkedList[T]) Pop() T {
+	tail := d.Tail
+	prev := tail.Prev
+	if prev != nil {
+		prev.Next = nil
+	}
+	d.Tail = prev
+	d.Length--
+	return tail.Value
 }
