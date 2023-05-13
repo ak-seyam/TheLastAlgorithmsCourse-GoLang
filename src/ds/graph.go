@@ -61,32 +61,76 @@ func NewAdjListGraph[T interface{}]() []*AdjListNode[T] {
 }
 
 func (a AdjListNode[T]) ShortestPathDijkstra(g []*AdjListNode[T], target int) []int {
-	seenSet := NewSet[int]()
 	previous := getInitializedSlice(len(g), -1)
+	heapIndexes := make([]int, len(g))
+	distancesHeap := getDistancesHeap(len(g), &heapIndexes)
 	distances := getInitializedSlice(len(g), math.MaxInt)
+	startDist, err := distancesHeap.Pop()
+	if err != nil {
+		panic(err)
+	}
+	startDist.value.Distance = 0
+	distancesHeap.Insert(*startDist)
 	distances[a.ID] = 0
-	for haveUnseen(seenSet, distances) {
-		shortest := shortestUnseen(seenSet, distances)
-		if shortest == -1 {
+	for shortest := shortestDistance(distancesHeap); shortest != nil; shortest = shortestDistance(distancesHeap) {
+		if shortest.value.ID == target { // you reach your goal your shortest is the target (you cannot go any shorter to your dist)
 			break
 		}
-		seenSet.Add(shortest)
-		if shortest == target { // you reach your goal your shortest is the target (you cannot go any shorter to your dist)
-			break
-		}
-		for _, con := range g[shortest].Connections {
-			if seenSet.Contains(con.To) { // because it was the local minimum at some point if this was the case it cannot be longest
-				continue
-			}
-			dist, updated := min(distances[con.To], con.Weight+distances[shortest])
+		for _, con := range g[shortest.value.ID].Connections {
+			dist, updated := min(distances[con.To], con.Weight+distances[shortest.value.ID])
 			if updated {
 				distances[con.To] = dist
-				previous[con.To] = shortest
+				previous[con.To] = shortest.value.ID
+				idx := heapIndexes[con.To]
+				distancesHeap.Update(idx, ComparableDistance{
+					value: Distance{
+						ID:       con.To,
+						Distance: dist,
+					},
+				})
 			}
 		}
 	}
 	src := a.ID
 	return collect(previous, src, target)
+}
+
+type Distance struct {
+	ID       int
+	Distance int
+}
+
+type ComparableDistance struct {
+	value Distance
+}
+
+func (cd ComparableDistance) Value() Distance {
+	return cd.value
+}
+
+func (cd ComparableDistance) CompareTo(cd2 Comparable[Distance]) ComparisonResult {
+	if cd.value.Distance > cd2.Value().Distance {
+		return MORE
+	} else if cd.value.Distance < cd2.Value().Distance {
+		return LESS
+	} else {
+		return EQUAL
+	}
+}
+
+func getDistancesHeap(gl int, nodes *[]int) MinHeap[Distance, ComparableDistance] {
+	h := NewMinHeap[Distance, ComparableDistance]()
+	for i := 0; i < gl; i++ {
+		node := ComparableDistance{
+			value: Distance{
+				ID:       i,
+				Distance: math.MaxInt,
+			},
+		}
+		idx := h.Insert(node)
+		(*nodes)[i] = idx
+	}
+	return h
 }
 
 func collect(previous []int, src, target int) []int {
@@ -123,25 +167,12 @@ func min(old, new int) (int, bool) {
 	}
 }
 
-func shortestUnseen(visitedSet Set[int], distances []int) int {
-	minDist := math.MaxInt
-	shortestID := -1
-	for ID, d := range distances {
-		if d < minDist && !visitedSet.Contains(ID) {
-			shortestID = ID
-			minDist = d
-		}
+func shortestDistance(distanceHeap MinHeap[Distance, ComparableDistance]) *ComparableDistance {
+	item, err := distanceHeap.Pop()
+	if err != nil {
+		panic(err)
 	}
-	return shortestID
-}
-
-func haveUnseen(visitedSet Set[int], distances []int) bool {
-	for ID, d := range distances {
-		if d != math.MaxInt && !visitedSet.Contains(ID) { // d != math.MaxInt means it is reachable from our starting point
-			return true
-		}
-	}
-	return false
+	return item
 }
 
 func getInitializedSlice(length int, targetInit int) []int {

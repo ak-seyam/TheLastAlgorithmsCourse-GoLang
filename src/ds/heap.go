@@ -37,20 +37,20 @@ func children(idx int) (int, int, error) {
 	return (idx * 2) + 1, (idx * 2) + 2, nil
 }
 
-func (h *MinHeap[T, V]) HeapifyUp(idx int) error {
+func (h *MinHeap[T, V]) HeapifyUp(idx int) (int, error) {
 	if idx <= 0 {
-		return nil
+		return -1, nil
 	}
 	parent, err := parent(idx)
 	if err != nil {
-		return err
+		return -1, err
 	}
 	parentValue := h.data[parent]
 	if h.data[idx].CompareTo(parentValue) == LESS {
 		h.data[idx], h.data[parent] = h.data[parent], h.data[idx]
 		h.HeapifyUp(parent)
 	}
-	return nil
+	return idx, nil
 }
 
 func (h *MinHeap[T, V]) HeapifyDown(idx int) error {
@@ -77,15 +77,19 @@ func (h *MinHeap[T, V]) HeapifyDown(idx int) error {
 	return nil
 }
 
-func (h *MinHeap[T, V]) Insert(val V) {
+func (h *MinHeap[T, V]) Insert(val V) int {
 	h.data = append(h.data, val)
-	h.HeapifyUp(h.length)
+	newIdx, err := h.HeapifyUp(h.length)
+	if err != nil {
+		panic(err)
+	}
 	h.length++
+	return newIdx
 }
 
 func (h *MinHeap[T, V]) Pop() (*V, error) {
 	if h.length == 0 {
-		return nil, errors.New("Empty heap!")
+		return nil, errors.New("empty heap")
 	}
 	val := h.data[0]
 	if h.length == 1 {
@@ -97,4 +101,14 @@ func (h *MinHeap[T, V]) Pop() (*V, error) {
 	h.data[0] = h.data[h.length]
 	h.HeapifyDown(0)
 	return &val, nil
+}
+
+func (h *MinHeap[T, V]) Update(idx int, newVal V) {
+	oldVal := h.data[idx]
+	h.data[idx] = newVal
+	if newVal.CompareTo(oldVal) == MORE {
+		h.HeapifyDown(idx)
+	} else {
+		h.HeapifyUp(idx)
+	}
 }
